@@ -1,5 +1,4 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 def calculate_loss(model, X, Y):
     N = X.shape[0]
@@ -20,6 +19,7 @@ def predict(model, x, **kwargs):
 
 def build_model(X, y, nn_hdim, num_passes=20000, print_loss=False):
     learning_rate = 0.05
+    N = X.shape[0]
     model = {
         'W1': np.random.normal(size=(2, nn_hdim)),
         'b1': np.zeros((1, nn_hdim)),
@@ -29,30 +29,26 @@ def build_model(X, y, nn_hdim, num_passes=20000, print_loss=False):
     N = X.shape[0]
     Y2D = np.zeros((N, 2))
     for n, i in enumerate(y): Y2D[n][i] = 1
-    n_pass = 0
-    while True:
-        for n_sample, sample in enumerate(X):
-            sample = np.array([sample])
-            y_hat, a, h = predict(model,sample, return_a_h=True)            
-            dLdy = y_hat - np.array([Y2D[n_sample]])
+    n_pass = -1
+    while n_pass < num_passes:
+        n_pass += 1
+        resample_indexes = np.arange(N)
+        np.random.shuffle(resample_indexes)
+        resample_indexes = np.array_split(resample_indexes, 10)
+        for sample_indexes in resample_indexes:
+            sample = X[sample_indexes]
+            target = Y2D[sample_indexes]
+            y_hat, a, h = predict(model, sample, return_a_h=True)            
+            dLdy = y_hat - target
             dLda = (1 - np.tanh(a)**2) * np.matmul(dLdy, model['W2'].T)
             dLdW2 = np.matmul(h.T, dLdy)
             dLdb2 = dLdy[:]
             dLdW1 = np.matmul(sample.T, dLda)
             dLdb1 = dLda[:]
             model['W1'] = model['W1'] - learning_rate*dLdW1
-            model['b1'] = model['b1'] - learning_rate*dLdb1
+            model['b1'] = model['b1'] - learning_rate*dLdb1.mean(axis=0)
             model['W2'] = model['W2'] - learning_rate*dLdW2
-            model['b2'] = model['b2'] - learning_rate*dLdb2
-            n_pass += 1
-            if print_loss and (n_pass + 1) % 1000 == 0:
-                print(f'Loss: {calculate_loss(model, X, y):.5f}')
-            if n_pass >= num_passes:
-                return model
-
-if __name__ == '__main__':
-    from sklearn.datasets import make_moons
-    X, y = make_moons(200, noise=0.20)
-    nn_hdim = 5
-    build_model(X, y, 5, 2000, True)
-    pass
+            model['b2'] = model['b2'] - learning_rate*dLdb2.mean(axis=0)
+        if print_loss and n_pass % 1000 == 0:
+            print(f'Loss: {calculate_loss(model, X, y):.5f}')
+    return model
