@@ -22,16 +22,14 @@ def build_model(X, y, nn_hdim, num_passes=20000, print_loss=False):
     N = X.shape[0]
     model = {
         'W1': np.random.normal(size=(2, nn_hdim)),
-        'b1': np.zeros((1, nn_hdim)),
+        'b1': np.random.normal(size=(1, nn_hdim)),
         'W2': np.random.normal(size=(nn_hdim, 2)),
-        'b2': np.zeros((1, 2))
+        'b2': np.random.normal(size=(1, 2))
     }
     N = X.shape[0]
     Y2D = np.zeros((N, 2))
     for n, i in enumerate(y): Y2D[n][i] = 1
-    n_pass = -1
-    while n_pass < num_passes:
-        n_pass += 1
+    for n_pass in range(num_passes):
         resample_indexes = np.arange(N)
         np.random.shuffle(resample_indexes)
         resample_indexes = np.array_split(resample_indexes, 10)
